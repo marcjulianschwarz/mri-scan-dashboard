@@ -11,13 +11,8 @@ from sklearn.linear_model import LinearRegression
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import PolynomialFeatures
 
-from brainmri.core import (
-    IMAGES_PATH,
-    MRIImage,
-    brain_image_paths,
-    get_head_circumference,
-    get_total_volume_in_ml,
-)
+from brainmri.constants import IMAGES_PATH, brain_image_paths
+from brainmri.core.mri_image import MRIImage
 
 
 def get_quadratic_fit(x, y):
@@ -105,9 +100,9 @@ with cols[0]:
         gas = []
         volumes = []
         for mri in mris:
-            ga = mri.ga
+            ga = mri.gestational_age()
             if ga != 0 and ga:
-                volume = get_total_volume_in_ml(mri)
+                volume = mri.volume_ml()
                 gas.append(ga)
                 volumes.append(volume)
 
@@ -129,9 +124,9 @@ with cols[1]:
             gas = []
             volumes = []
             for mri in mris:
-                ga = mri.ga
+                ga = mri.gestational_age()
                 if ga != 0 and ga:
-                    volume = get_total_volume_in_ml(mri, intensity=intensity)
+                    volume = mri.volume_ml(intensity)
                     gas.append(ga)
                     volumes.append(volume)
 
@@ -159,9 +154,9 @@ if "max_cs" not in st.session_state or st.session_state["max_cs"] == []:
     st.session_state["max_cs"] = []
     st.session_state["gas"] = []
     st.write("Loading Brain Volumes")
-    for mri_image in st.session_state.mris:
-        max_c = get_head_circumference(mri_image)
-        ga = mri_image.ga
+    for mri_image in mris:
+        max_c = mri_image.head_circumference()
+        ga = mri_image.gestational_age()
         if max_c and ga:
             st.session_state["max_cs"].append(max_c)
             st.session_state["gas"].append(ga)

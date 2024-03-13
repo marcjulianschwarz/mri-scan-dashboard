@@ -1,29 +1,19 @@
 import streamlit as st
 
-from brainmri.core import (
-    IMAGES_PATH,
-    PLOTS_PATH,
-    MRIImage,
-    brain_image_name_to_path,
-    get_head_circumference,
-    get_slice,
-    get_total_volume_in_ml,
-    get_volume_in_ml_per_slice,
-    plot_3d_brain,
-    plot_animator,
-    plot_slice,
-)
+from brainmri.constants import BRAIN_IMAGE_NAME_TO_PATH_MAPPING, IMAGES_PATH, PLOTS_PATH
+from brainmri.core import MRIImage
 from brainmri.nn import Net, predict_ga, predict_ga_reg
-from brainmri.viz import volume_histogram
+from brainmri.viz import plot_3d_brain, plot_animator, volume_histogram
 
 if "mri_image" not in st.session_state:
-    image_path = list(brain_image_name_to_path.values())[0]
+    image_path = list(BRAIN_IMAGE_NAME_TO_PATH_MAPPING.values())[0]
     st.session_state["mri_image"] = MRIImage.from_file(image_path)
+
+mri_image: MRIImage = st.session_state.mri_image
 
 
 def set_mri_image():
-
-    image_path = brain_image_name_to_path[st.session_state.img_name]
+    image_path = BRAIN_IMAGE_NAME_TO_PATH_MAPPING[st.session_state.img_name]
     st.session_state["mri_image"] = MRIImage.from_file(image_path)
 
 
@@ -75,43 +65,38 @@ with cols[0]:
 
     st.selectbox(
         "Select MRI Image",
-        brain_image_name_to_path.keys(),
+        BRAIN_IMAGE_NAME_TO_PATH_MAPPING.keys(),
         on_change=set_mri_image,
         key="img_name",
     )
 
     st.selectbox("Select Axis", ["z", "y", "x"], key="axis")
-    max_slice_nr = st.session_state.mri_image.get_max_slice_nr(st.session_state.axis)
+    max_slice_nr = mri_image.max_slice_nr(st.session_state.axis)
     st.slider("Select Slice", 0, max_slice_nr, max_slice_nr // 2, key="slice_nr")
-
-    # st.select_slider(
-    #     "Select Intensity", st.session_state.mri_image.intensities, key="intensity"
-    # )
 
 
 with cols[1]:
     st.write("#### Brain Stats")
     st.metric(
         "Total Volume",
-        f"{round(get_total_volume_in_ml(st.session_state.mri_image))} ml",
+        f"{round(mri_image.volume_ml())} ml",
     )
 
-    slice = get_slice(
-        st.session_state.mri_image, st.session_state.axis, st.session_state.slice_nr
-    )
-    st.metric(
-        "Total Volume for Slice",
-        f"{round(get_volume_in_ml_per_slice(slice, st.session_state.mri_image.voxel_size))} ml",
-    )
+    slice = mri_image.slice(st.session_state.axis, st.session_state.slice_nr)
+
+    # st.metric(
+    #     "Total Volume for Slice",
+    #     f"{round(get_volume_in_ml_per_slice(slice, mri_image.voxel_size))} ml",
+    # )
 
     st.metric(
         "Head Circumference",
-        f"{round(get_head_circumference(st.session_state.mri_image), 2)} cm",
+        f"{round(mri_image.head_circumference(), 2)} cm",
     )
 
     # st.metric(
     #     "Total Volume for Slice (intensity)",
-    #     f"{round(get_volume_in_ml_per_slice(slice, st.session_state.mri_image.voxel_size, st.session_state.intensity))} ml",
+    #     f"{round(get_volume_in_ml_per_slice(slice, mri_image.voxel_size, st.session_state.intensity))} ml",
     # )
 
 
@@ -119,15 +104,14 @@ with cols[2]:
     st.write("#### GA Stats")
     st.metric(
         "Gestational Age",
-        f"{round(st.session_state.mri_image.ga, 2)} weeks",
+        f"{round(mri_image.gestational_age(), 2)} weeks",
     )
 
-    ga = predict_ga(st.session_state.mri_image)
+    ga = predict_ga(mri_image)
     st.metric("Predicted GA (CNN)", f"{round(ga, 2)} weeks")
 
-    ga_reg = predict_ga_reg(st.session_state.mri_image)
+    ga_reg = predict_ga_reg(mri_image)
     st.metric("Predicted GA (Regression)", f"{round(ga_reg, 2)} weeks")
-
     st.metric("Predicted GA (Ensemble)", f"{round((ga + ga_reg) / 2, 2)} weeks")
 
 with cols[3]:
@@ -135,34 +119,25 @@ with cols[3]:
     st.write(f"#### Brain MRI Slice {st.session_state.slice_nr}")
 
     st.pyplot(
-        plot_slice(
-            get_slice(
-                st.session_state.mri_image,
-                st.session_state.axis,
-                st.session_state.slice_nr,
-            ),
-            return_fig=True,
-        ),
+        mri_image.slice(st.session_state.axis, st.session_state.slice_nr).plot(
+            return_fig=True
+        )
     )
 
-    with st.expander("Show animator"):
-        st.plotly_chart(
-            plot_animator(st.session_state.mri_image.slices_z), use_container_width=True
-        )
+    # with st.expander("Show animator"):
+    #     st.plotly_chart(plot_animator(mri_image.slices_z), use_container_width=True)
 
 with cols[4]:
     if st.checkbox("Show 3D Brain"):
-        if f"3d_fig_{st.session_state.mri_image.filename}" not in st.session_state:
-            st.session_state[f"3d_fig_{st.session_state.mri_image.filename}"] = (
-                plot_3d_brain(st.session_state.mri_image)
-            )
+        if f"3d_fig_{mri_image.filename}" not in st.session_state:
+            st.session_state[f"3d_fig_{mri_image.filename}"] = plot_3d_brain(mri_image)
             st.plotly_chart(
-                st.session_state[f"3d_fig_{st.session_state.mri_image.filename}"],
+                st.session_state[f"3d_fig_{mri_image.filename}"],
                 use_container_width=True,
             )
         else:
             st.plotly_chart(
-                st.session_state[f"3d_fig_{st.session_state.mri_image.filename}"],
+                st.session_state[f"3d_fig_{mri_image.filename}"],
                 use_container_width=True,
             )
 
@@ -170,27 +145,23 @@ cols = st.columns(2)
 
 with cols[0]:
     volumes = [
-        get_total_volume_in_ml(st.session_state.mri_image, intensity=intensity)
-        for intensity in st.session_state.mri_image.intensities
+        mri_image.volume_ml(intensity) for intensity in mri_image.intensity_values()
     ]
+
     st.plotly_chart(
-        volume_histogram(volumes, st.session_state.mri_image.intensities),
+        volume_histogram(volumes, mri_image.intensity_values()),
         use_container_width=True,
     )
 
 with cols[1]:
 
-    slice = get_slice(
-        st.session_state.mri_image, st.session_state.axis, st.session_state.slice_nr
-    )
+    slice = mri_image.slice(st.session_state.axis, st.session_state.slice_nr)
     volumes = [
-        get_volume_in_ml_per_slice(
-            slice, st.session_state.mri_image.voxel_size, intensity=intensity
-        )
-        for intensity in st.session_state.mri_image.intensities
+        slice.volume_in_ml(mri_image.voxel_size, intensity=intensity)
+        for intensity in mri_image.intensity_values()
     ]
     st.plotly_chart(
-        volume_histogram(volumes, st.session_state.mri_image.intensities),
+        volume_histogram(volumes, mri_image.intensity_values()),
         use_container_width=True,
     )
 
