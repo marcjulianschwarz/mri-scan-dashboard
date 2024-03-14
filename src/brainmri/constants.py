@@ -15,9 +15,9 @@ brain_image_paths = [img for img in img_paths if "brain" in img.stem]
 other_image_paths = [img for img in img_paths if not "brain" in img.stem]
 BRAIN_IMAGE_NAME_TO_PATH_MAPPING = {img.stem: img for img in brain_image_paths}
 
-gest_df = pd.read_csv(str(DATA_TASK_PATH / "gestational_ages.csv"))
-gas_ids = list(gest_df["ids"])
-gas = list(gest_df["tag_ga"])
+gast_df = pd.read_csv(str(DATA_TASK_PATH / "gestational_ages.csv"))
+GESTATIONAL_AGE_IDS = list(gast_df["ids"])
+GESTATIONAL_AGES = list(gast_df["tag_ga"])
 
 INTENSITY_TO_NAME_MAPPING = {
     "0": "eCSF_L",

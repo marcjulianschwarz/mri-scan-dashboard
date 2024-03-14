@@ -6,11 +6,11 @@ import numpy as np
 from .mri_slice import MRISlice
 
 
-def get_mask(slice, intensity=None):
+def get_mask(image: np.ndarray, intensity=None):
     if intensity is None:
-        mask = slice > 0
+        mask = image > 0
     else:
-        mask = slice == intensity
+        mask = image == intensity
     return mask
 
 

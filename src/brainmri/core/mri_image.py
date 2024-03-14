@@ -4,7 +4,7 @@ from typing import List
 import nibabel as nib
 import numpy as np
 
-from .ga import gestational_age
+from .gestational_age import gestational_age
 from .head_circum import head_circumference
 from .intensity import intensity_values
 from .mri_slice import MRISlice

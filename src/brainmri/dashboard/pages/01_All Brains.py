@@ -67,7 +67,7 @@ with cols[1]:
 
     gas = []
     for mri_image in mris:
-        ga = mri_image.ga
+        ga = mri_image.gestational_age()
         if ga is None or ga < 10:
             continue
         gas.append(ga)
